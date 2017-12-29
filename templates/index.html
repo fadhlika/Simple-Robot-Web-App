@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Robot</title>
+        <script src="{{ url_for('static', filename='jquery-3.2.1.min.js') }}"></script>
+        <script src="{{ url_for('static', filename='mqttws31.js') }}"></script>
+        <script src="{{ url_for('static', filename='Chart.bundle.js') }}"></script>        
+        <link rel="stylesheet" href="{{ url_for('static', filename='bulma.css') }}">     
+    </head>
+    <body>
+        <section class="section">
+            <div class="containter" style="height:20vh; width:40vw; margin: auto;">
+                <div>
+                    <canvas id="myChart"></canvas>             
+                </div>
+                <div class="columns is-multiline is-mobile">
+                    <div class="column is-one-quarter">
+                    </div>
+                    <div class="column is-one-quarter">
+                        <button class="button" id="forward">Forward</button>
+                    </div>
+                    <div class="column is-one-quarter">
+                    </div>
+                </div>
+                <div class="columns is-multiline is-mobile">
+                    <div class="column is-one-quarter">
+                        <button class="button" id="left">Left</button>
+                    </div>
+                    <div class="column is-one-quarter">
+                    </div>
+                    <div class="column is-one-quarter">
+                        <button class="button" id="right">Right</button>
+                    </div>
+                </div>
+                <div class="columns is-multiline is-mobile">
+                    <div class="column is-one-quarter">
+                    </div>
+                    <div class="column is-one-quarter">
+                        <button class="button" id="reverse">Reverse</button>
+                    </div>
+                    <div class="column is-one-quarter">
+                    </div>
+                </div>
+            </div>
+            <script>
+                var ctx = document.getElementById('myChart').getContext('2d');
+                var chart = new Chart(ctx, {
+                   // The type of chart we want to create
+                    type: 'line',
+
+                    // The data for our dataset
+                    data: {
+                        datasets: [{
+                            label: "Temperature",
+                            borderColor: 'rgb(255, 99, 132)',
+                            data: [],
+                            yAxisID: "y-axis-1",
+                        },{
+                            label: "Humidty",
+                            borderColor: 'rgb(105, 200, 102)',
+                            data: [],
+                            yAxisID: "y-axis-2",
+                        }]
+                    },
+
+                    // Configuration options go here
+                    options: {
+                        scales: {
+                            xAxes: [{
+                                type: 'time',
+                                
+                            }],
+                            yAxes: [{
+                                type: "linear", // only linear but allow scale type registration. This allows extensions to exist solely for log scale for instance
+                                display: true,
+                                position: "left",
+                                id: "y-axis-1",
+                            }, {
+                                type: "linear", // only linear but allow scale type registration. This allows extensions to exist solely for log scale for instance
+                                display: true,
+                                position: "right",
+                                id: "y-axis-2",
+                            }],
+                        }
+                    }
+                });
+
+                // Create a client instance
+                client = new Paho.MQTT.Client("127.0.0.1", 1884, "/");
+
+                // set callback handlers
+                client.onConnectionLost = onConnectionLost;
+                client.onMessageArrived = onMessageArrived;
+
+                // connect the client
+                client.connect({onSuccess:onConnect});
+
+
+                // called when the client connects
+                function onConnect() {
+                    // Once a connection has been made, make a subscription and send a message.
+                    console.log("onConnect");
+                    client.subscribe("temp");
+                    client.subscribe("humid");
+                }
+
+                // called when the client loses its connection
+                function onConnectionLost(responseObject) {
+                    if (responseObject.errorCode !== 0) {
+                        console.log("onConnectionLost:"+responseObject.errorMessage);
+                    }
+                }
+
+                // called when a message arrives
+                function onMessageArrived(message) {
+                    console.log("onMessageArrived:"+message.payloadString);
+                    data = {
+                        x: new Date(),
+                        y: Number(message.payloadString)
+                    };
+                    if(message.destinationName == "temp"){
+                        chart.data.datasets[0].data.push(data);
+                    } else if(message.destinationName == "humid"){
+                        chart.data.datasets[1].data.push(data);
+                    }
+                    chart.update();
+                }
+
+                $('#forward').bind("mousedown touchstart", function(){
+                    message = new Paho.MQTT.Message("1");
+                    message.destinationName = "tes";
+                    client.send(message);
+                });
+                $('#forward').bind("mouseup touchend", function(){
+                    message = new Paho.MQTT.Message("0");
+                    message.destinationName = "tes";
+                    client.send(message);
+                });
+                $('#reverse').bind("mousedown touchstart", function(){
+                    message = new Paho.MQTT.Message("2");
+                    message.destinationName = "tes";
+                    client.send(message);
+                })
+                $('#reverse').bind("mouseup touchend", function(){
+                    message = new Paho.MQTT.Message("0");
+                    message.destinationName = "tes";
+                    client.send(message);
+                })
+                $('#left').bind("mousedown touchstart", function(){
+                    message = new Paho.MQTT.Message("3");
+                    message.destinationName = "tes";
+                    client.send(message);
+                })
+                $('#left').bind("mouseup touchend", function(){
+                    message = new Paho.MQTT.Message("0");
+                    message.destinationName = "tes";
+                    client.send(message);
+                })
+                $('#right').bind("mousedown touchstart", function(){
+                    message = new Paho.MQTT.Message("4");
+                    message.destinationName = "tes";
+                    client.send(message);
+                })
+                $('#right').bind("mouseup touchend", function(){
+                    message = new Paho.MQTT.Message("0");
+                    message.destinationName = "tes";
+                    client.send(message);
+                })
+
+                function addData(chart, label, data) {
+                    chart.data.datasets.forEach((dataset) => {
+                        dataset.data.push(data);
+                    });
+                    chart.update();
+                }
+            </script>
+    </body>
+</html>
